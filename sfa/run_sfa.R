@@ -10,7 +10,7 @@ library(INLA)
 library(RandomFields)
 
 ## Load a simulator function
-source("sfa_simulator.R" )
+source("sfa/sfa_simulator.R" )
 
 ## Simulation settings
 n_factors_true <- 7
@@ -35,6 +35,19 @@ Data <- list(Y_sp=Y_sp, n_f=n_factors_estimation, n_x=mesh$n,
              M1=spde$param.inla$M1,
              M2=spde$param.inla$M2)
 
+
+# Save relevant data to read into Julia
+df <- data.frame(Data$Y_sp)
+df$idx <- Data$x_s
+write.csv(df, "sfa/counts.csv")
+write.csv(data.frame(i = Data$M0@i, j = Data$M0@j, x = Data$M0@x), "sfa/M0.csv")
+write.csv(data.frame(i = Data$M1@i, j = Data$M1@j, x = Data$M1@x), "sfa/M1.csv")
+write.csv(data.frame(i = Data$M2@i, j = Data$M2@j, x = Data$M2@x), "sfa/M2.csv")
+write.csv(simdat$Loadings_pf, "sfa/Loadings.csv")
+write.csv(simdat$Omega_sf, "sfa/Omega.csv")
+
+
+
 ## Define fixed effect parameters and their intitial values for
 ## optimization
 ##
@@ -48,8 +61,8 @@ pars <- list(beta_p=log(apply(Y_sp,2, mean)),
 
 ## Compile and build model
 t0 <- Sys.time()
-compile("sfa.cpp")
-dyn.load(dynlib('sfa'))
+compile("sfa/sfa.cpp")
+dyn.load(dynlib('sfa/sfa'))
 Obj <- MakeADFun(data=Data, parameters=pars, random='Omega_xf')
 Obj$env$beSilent()                      # suppress console output
 table(names(Obj$env$last.par))          # parameter dimensions
